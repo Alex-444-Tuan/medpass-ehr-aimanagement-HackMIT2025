@@ -42,10 +42,59 @@ const Login = () => {
     return (
         <GoogleOAuthProvider clientId={clientId}>
         <div className="flex h-screen">
-            <div className="w-1/2 bg-primaryDark"></div>
+            <div className="w-1/2 bg-primaryDark flex flex-col items-center justify-center relative">
+                <div className="flex flex-col items-center justify-center h-full w-full relative">
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '3%',
+                            left: '5%',
+                            width: '90%',
+                            height: '5px',
+                            backgroundColor: '#FFF7B9',
+                            borderRadius: '2.5px',
+                        }}
+                    />
+                    <img
+                        src="/side_art.png"
+                        alt="Side Art"
+                        style={{
+                            height: '90%',
+                            objectFit: 'contain',
+                            position: 'absolute',
+                            top: '5%',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                        }}
+                    />
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: '3%',
+                            left: '5%',
+                            width: '90%',
+                            height: '5px',
+                            backgroundColor: '#FFF7B9',
+                            borderRadius: '2.5px',
+                        }}
+                    />
+                </div>
+            </div>
             <div className="w-1/2 bg-blue2 flex items-center justify-center">
-            <div className="bg-primaryWhite rounded-2xl shadow-lg flex flex-col items-center justify-center" style={{height: '60%', width: '48%'}}>
-                <h2 className="text-3xl font-bold mb-6">Log in</h2>
+            <div
+                className="bg-primaryWhite rounded-2xl shadow-lg flex flex-col items-center justify-center"
+                style={{
+                    height: '60%',
+                    width: '48%',
+                    border: '5px solid #FFF7B9',
+                }}
+            >
+                <h2
+                    className="text-3xl font-bold mb-6"
+                    style={{ color: '#5C80E4' }}
+                >
+                    Log in
+                </h2>
                 <form onSubmit={handleLogin} className="w-full flex flex-col items-center">
                 <input
                     value={username}
