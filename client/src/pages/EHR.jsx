@@ -2,6 +2,7 @@ import Sidebar from './Sidebar';
 import { useState, useRef, useEffect } from "react";
 import EHRCardDetail from '../components/EHRCardDetail';
 import MarkdownRenderer from "../utils/MarkdownRenderer";
+import { useNavigate } from "react-router-dom";
 
 const EHR = () => {
     const [recording, setRecording] = useState(false);
@@ -10,6 +11,11 @@ const EHR = () => {
     const [demoEHR, setDemoEHR] = useState("");
     // set up all the data for EHR cards here
     const [CriticalSummary, setCriticalSummary] = useState("does not have data yet");
+    //Transfer data from EHR page to QR code page
+    const navigate = useNavigate();
+    const transferDataToQRCodePage = () => {
+        navigate('/qrcode', { state: { CriticalSummary } });
+    };
     const [VisitHistory, setVisitHistory] = useState("does not have data yet");
     const [LabAndImaging, setLabAndImaging] = useState("does not have data yet");
     const [ProceduresAndSurgeries, setProceduresAndSurgeries] = useState("does not have data yet");
@@ -35,6 +41,22 @@ const EHR = () => {
         setDescriptionOfLI("Recent test results and imaging reports.");
         setDescriptionOfPS("Records of operations and medical procedures the patient has undergone.");
         setDescriptionOfFD("Full medical documents and notes.");
+
+        const fetchExisting = async () => {
+            try {
+            const res = await fetch("http://localhost:8000/load-categories");
+            const data = await res.json();
+
+            if (data.critical_summary) setCriticalSummary(data.critical_summary);
+            if (data.visit_history) setVisitHistory(data.visit_history);
+            if (data.procedures_surgeries) setProceduresAndSurgeries(data.procedures_surgeries);
+            } catch (err) {
+            console.error("Error loading categories:", err);
+            }
+        };
+
+        fetchExisting();
+        loadAllDocs();
     }, []);
 
     const startRecording = async () => {
@@ -163,13 +185,12 @@ const EHR = () => {
                 <div className="flex flex-col items-center gap-[10px] flex-[1_0_0] px-[10px] overflow-y-auto">
                     <EHRCardDetail title={titleOfCS} onClick={() => onCLickCard("CriticalSummary")} description={descriptionOfCS} />
                     <EHRCardDetail title={titleOfVH} onClick={() => onCLickCard("VisitHistory")} description={descriptionOfVH} />
-                    <EHRCardDetail title={titleOfLI} onClick={() => onCLickCard("LabAndImaging")} description={descriptionOfLI} />
                     <EHRCardDetail title={titleOfPS} onClick={() => onCLickCard("ProceduresAndSurgeries")} description={descriptionOfPS} />
                     <EHRCardDetail title={titleOfFD} onClick={() => onCLickCard("FullDocs")} description={descriptionOfFD} />
                 </div>
             </div>
             <div className="flex flex-col items-center gap-[10px] self-stretch w-[380px] py-[10px]">
-                <h1 className="text-[20px] font-bold">calendar</h1>
+                {/* <h1 className="text-[20px] font-bold">calendar</h1> */}
             </div>
 
             {

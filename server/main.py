@@ -9,6 +9,14 @@ import os
 import whisper
 from dotenv import load_dotenv
 from pipelines.RAGPipeline import add_text_to_vectorstore
+import re
+import glob
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from pathlib import Path
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import simpleSplit
 
 
 load_dotenv()
@@ -111,6 +119,20 @@ You are going to receive a conversation between a nurse and a patient following 
 
     return {"status": "ok", "EHR": response}
 
+
+def clean_text_from_codeblocks(text: str) -> str:
+    """
+    Remove ```txt ... ``` blocks (and optionally any other code block)
+    from the given text.
+    """
+    # Regex to capture ```txt ... ``` including newlines, non-greedy
+    cleaned = re.sub(r"```txt(.*?)```", r"\1", text, flags=re.DOTALL)
+
+    # Optionally, remove other generic ```...``` blocks
+    cleaned = re.sub(r"```(.*?)```", r"\1", cleaned, flags=re.DOTALL)
+
+    return cleaned.strip()
+
 #helper function to generate category files, results and save to local
 
 def generate_category_file(category: str, ehr_text: str):
@@ -144,7 +166,8 @@ Update the {category.replace("_", " ").title()} accordingly, keeping old informa
     ]
 
     output = pipe(text=messages, max_new_tokens=700)
-    result = output[0]["generated_text"][-1]["content"]
+    raw_result = output[0]["generated_text"][-1]["content"]
+    result = clean_text_from_codeblocks(raw_result)
 
     # Save updated result
     filename = f"{folder}/{category}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
@@ -164,7 +187,7 @@ async def confirm_EHR(EHR: str = Form(...)):
         f.write(EHR)
     
     # Add EHR to vectorstore for future retrieval
-    metadata = {"source": filename, "type": "ehr"}
+    metadata = {"source": filename}
     add_text_to_vectorstore(EHR, metadata)
     print("📝 EHR confirmed and saved successfully!")
 
@@ -196,3 +219,75 @@ async def list_EHR():
             with open(path, "r", encoding="utf-8") as f:
                 docs.append({"file": file, "text": f.read()})
     return {"docs": docs}
+
+def get_latest_file_text(base_dir,folder):
+    path = os.path.join(base_dir, folder)
+    if not os.path.exists(path) or not os.listdir(path):
+        return None
+    latest_file = sorted(glob.glob(f"{path}/*.txt"))[-1]
+    with open(latest_file, "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/load-categories")
+async def load_categories():
+    base_dir = "EHR"  # adjust if your folder is "server/EHR"
+
+    def get_latest_file_text(folder):
+        path = os.path.join(base_dir, folder)
+        if not os.path.exists(path) or not os.listdir(path):
+            return None
+        latest_file = sorted(glob.glob(f"{path}/*.txt"))[-1]
+        with open(latest_file, "r", encoding="utf-8") as f:
+            return f.read()
+
+    return {
+        "critical_summary": get_latest_file_text("EHR_critical_summary"),
+        "visit_history": get_latest_file_text("EHR_visit_history"),
+        "procedures_surgeries": get_latest_file_text("EHR_procedures_surgeries"),
+        "fulldocs": get_latest_file_text("fulldocs"),
+        # Lab & Imaging (optional) – same logic if you create folder
+        "lab_and_imaging": get_latest_file_text("EHR_lab_and_imaging") if os.path.exists(os.path.join(base_dir, "EHR_lab_and_imaging")) else None,
+    }
+
+STATIC_DIR = Path("static")
+STATIC_DIR.mkdir(exist_ok=True)
+
+PDF_PATH = STATIC_DIR / "critical_summary.pdf"
+
+class SummaryRequest(BaseModel):
+    summary: str
+
+def generate_pdf(content: str):
+    """Generate a simple PDF with the given text content."""
+
+    content = get_latest_file_text("EHR","EHR_critical_summary")
+
+    c = canvas.Canvas(str(PDF_PATH), pagesize=letter)
+    width, height = letter
+    max_width = width - 200
+    y = height - 140
+    # Title
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(100, height - 100, "Critical Summary")
+    # Body text
+    c.setFont("Helvetica", 12)
+    # Wrap text
+    lines = simpleSplit(content, "Helvetica", 12, max_width)
+    for line in lines:
+        c.drawString(100, y, line)
+        y -= 14  # move down line height
+    c.save()
+
+@app.post("/update-summary")
+def update_summary(req: SummaryRequest):
+    """
+    Update the critical summary and regenerate PDF.
+    Body: { "summary": "some text here" }
+    """
+    generate_pdf(req.summary)
+    return {"pdf_url": "http://0.0.0.0:8000/summary-pdf"}
+
+@app.get("/summary-pdf")
+def get_pdf():
+    """Serve the latest generated PDF."""
+    return FileResponse(PDF_PATH, media_type="application/pdf")
