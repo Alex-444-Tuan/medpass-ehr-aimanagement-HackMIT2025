@@ -23,5 +23,4 @@ def add_text_to_vectorstore(text: str, metadata: dict = None):
     Add documents to vectorstore
     """
     vector_store.add_texts([text], metadatas=[metadata or {}])
-    vector_store.persist()
     return True

@@ -8,7 +8,8 @@ import torch
 import os
 import whisper
 from dotenv import load_dotenv
-from RAGPipeline import add_text_to_vectorstore
+from pipelines.RAGPipeline import add_text_to_vectorstore
+
 
 load_dotenv()
 

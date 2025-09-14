@@ -6,7 +6,7 @@ const AIDoctor = () => {
             <Sidebar />
             <div className="flex-1 bg-primaryWhite">
                 <iframe
-                    src="http://localhost:8000"
+                    src="http://localhost:8002"
                     title="AI Doctor Chat"
                     style={{
                         width: '100%',

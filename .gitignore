@@ -38,3 +38,5 @@ node_modules/
 
 __pycache__/
 *.pyc
+
+chroma_langchain_db
