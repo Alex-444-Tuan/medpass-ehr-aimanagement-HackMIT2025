@@ -1,0 +1,21 @@
+```txt
+Procedure: STAT ECG
+Date: 2024-01-26
+Outcome: (Information not provided in the text)
+
+Procedure: Oxygen saturation to be monitored
+Date: 2024-01-26
+Outcome: (Information not provided in the text)
+
+Procedure: Continuous cardiac monitoring to be initiated
+Date: 2024-01-26
+Outcome: (Information not provided in the text)
+
+Procedure: IV access established
+Date: 2024-01-26
+Outcome: (Information not provided in the text)
+
+Procedure: Aspirin 325mg PO administered
+Date: 2024-01-26
+Outcome: (Information not provided in the text)
+```

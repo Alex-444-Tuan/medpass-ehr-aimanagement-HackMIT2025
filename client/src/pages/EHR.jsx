@@ -1,6 +1,7 @@
 import Sidebar from './Sidebar';
 import { useState, useRef, useEffect } from "react";
 import EHRCardDetail from '../components/EHRCardDetail';
+import MarkdownRenderer from "../utils/MarkdownRenderer";
 
 const EHR = () => {
     const [recording, setRecording] = useState(false);
@@ -70,6 +71,23 @@ const EHR = () => {
         setRecording(false);
     };
 
+    const handleUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file, file.name);
+
+        const result = await fetch("http://localhost:8000/voice-to-EHR", {
+            method: "POST",
+            body: formData,
+        });
+
+        const data = await result.json();
+        setDemoEHR(data.EHR);
+    };
+
+
     const onCLickCard = (id) => {
         if (id === "CriticalSummary") {
             setSelectedCard(CriticalSummary);
@@ -98,12 +116,30 @@ const EHR = () => {
         const formData = new FormData();
         formData.append("EHR", demoEHR);
 
-    await fetch("http://localhost:8000/confirm-EHR", {
+    const res = await fetch("http://localhost:8000/confirm-EHR", {
             method: "POST",
             body: formData,
     });
+    const data = await res.json();
+    setCriticalSummary(data.categories.critical_summary.text);
+    setVisitHistory(data.categories.visit_history.text);
+    setProceduresAndSurgeries(data.categories.procedures_surgeries.text);
+
+    loadAllDocs();
+
     setDemoEHR("");
     }
+
+    const loadAllDocs = async () => {
+    const res = await fetch("http://localhost:8000/list-EHR");
+    const data = await res.json();
+    if (res.ok) {
+        // Concatenate all docs into one string (or keep as array if you want list view)
+        const allText = data.docs.map(d => `--- ${d.file} ---\n${d.text}`).join("\n\n");
+        setFullDocs(allText);
+    }
+    };
+
 
     return (
         <div className="flex h-screen bg-primaryDark">
@@ -113,6 +149,15 @@ const EHR = () => {
                 <div className="flex items-start gap-[10px] self-stretch pr-[50px] pl-[10px] py-[10px]">
                     <button className="bg-primaryDark hover:bg-blue1 disabled:bg-primaryDark disabled:opacity-50 text-white font-medium py-2 px-4 rounded" onClick={startRecording} disabled={recording}>{recording ? "Recording 🔴" : "Record"}</button>
                     <button className="bg-primaryDark hover:bg-blue1 disabled:bg-primaryDark disabled:opacity-50 text-white font-medium py-2 px-4 rounded" onClick={stopRecording} disabled={!recording}>Generate EHR</button>
+                      <label className="bg-primaryDark hover:bg-blue1 text-white font-medium py-2 px-4 rounded cursor-pointer">
+                        Upload Voice
+                        <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={handleUpload}
+                        />
+                    </label>
                     {audioURL && <audio src={audioURL} controls />}
                 </div>
                 <div className="flex flex-col items-center gap-[10px] flex-[1_0_0] px-[10px] overflow-y-auto">
@@ -134,7 +179,9 @@ const EHR = () => {
                     {titleOfSelectedCard}
                 </div>
                 <div className="h-[714px] w-[505px] bg-white border shadow p-4 overflow-y-auto">
-                    {selectedCard}
+                    <MarkdownRenderer>
+                        {selectedCard.replace(/(\[.*?\])/g, "$1\n")}
+                    </MarkdownRenderer>
                 </div>
                 <button className="w-[506px] bg-primaryDark hover:bg-blue1 disabled:bg-primaryDark text-white font-medium py-2 px-4" onClick={onCloseCard}>Close</button>
             </div>
