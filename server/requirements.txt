@@ -1,0 +1,37 @@
+#google colab dependencies
+numpy 
+pandas 
+matplotlib 
+seaborn 
+scikit-learn 
+scipy 
+pillow
+torch 
+torchvision 
+tensorflow 
+gdown 
+opencv-python 
+plotly
+accelerate
+transformers
+bitsandbytes
+
+#sound track dependencies
+sounddevice 
+scipy 
+openai-whisper
+pydub
+
+#load environment variables
+dotenv
+
+#connection to frontend
+fastapi
+uvicorn
+
+#embeddings and vectorstore
+langchain-mistralai
+langchain-chroma
+
+#other dependencies
+python-multipart
