@@ -3,6 +3,10 @@ client/.env
 server/.env
 .env
 .env.*
+.venv
+.chainlit
+
+
 
 # Logs
 logs
@@ -31,3 +35,6 @@ dist-ssr
 
 # Ignore dependencies
 node_modules/
+
+__pycache__/
+*.pyc

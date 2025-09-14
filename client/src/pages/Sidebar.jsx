@@ -26,7 +26,7 @@ const Sidebar = () => {
             <button
                 className="w-full text-primaryWhite py-3 mb-4 rounded transition flex items-center justify-center bg-qrcodeRed hover:bg-qrcodeRedDim"
             >
-                QRCode
+                QR Code
             </button>
         </Link>
     </div>
