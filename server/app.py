@@ -1,121 +1,37 @@
-from fastapi import FastAPI, File, UploadFile, Form
-from datetime import datetime
-import shutil
-from transformers import BitsAndBytesConfig, pipeline
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-import torch
-import os
-import whisper
-from dotenv import load_dotenv
-from RAGPipeline import add_text_to_vectorstore
+import chainlit as cl
+from langgraph.graph import StateGraph, END
+from typing import TypedDict
+import asyncio
 
-load_dotenv()
+class State(TypedDict):
+    messages: list[str]
 
-app = FastAPI()
-pipe = None
+workflow = StateGraph(State)
 
-whisper_model = whisper.load_model("turbo")
+async def triage_node(state: State):
+    user_message = state["messages"][-1].lower()
+    if "hi" in user_message or "hello" in user_message:
+        return {"messages": state["messages"] + ["👋 Hello! I’m MedPass AI Doctor. How can I help you today?"]}
+    else:
+        return {"messages": state["messages"]}
 
-if not os.environ.get("HF_TOKEN"):
-    os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+workflow.add_node("triage", triage_node)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"], 
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+async def doctor_node(state: State):
+    user_message = state["messages"][-1]
+    ai_response = f"DoctorBot: I see you said '{user_message}'. Can you tell me more about your symptoms?"
+    return {"messages": state["messages"] + [ai_response]}
 
-class RequestBody(BaseModel):
-    prompt: str
-    max_new_tokens: int = 1024
+workflow.add_node("doctor", doctor_node)
 
-@app.on_event("startup")
-def load_model():
-    """
-    Load the MedGemma model with optional quantization.
-    """
-    global pipe
-    model_variant = "4b-it"
-    model_id = f"google/medgemma-{model_variant}"
-    use_quantization = True
+workflow.set_entry_point("triage")
+workflow.add_edge("triage", "doctor")
+workflow.add_edge("doctor", END)
 
-    model_kwargs = dict(
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-    )
+app = workflow.compile()
 
-    if use_quantization:
-        model_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_4bit=True)
-
-    pipe = pipeline("image-text-to-text", model=model_id, model_kwargs=model_kwargs)
-    print("✅ MedGemma model loaded successfully!")
-
-@app.post("/voice-to-EHR")
-async def upload_audio(file: UploadFile = File(...)):
-    save_path = f"records/{file.filename}"
-
-    os.makedirs("records", exist_ok=True)
-
-    with open(save_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    speechText = whisper_model.transcribe(save_path, fp16=False)
-
-    text = speechText["text"]
-
-    prompt= text
-
-    role_instruction = """You are a professional nurse with extensive experience in writing Electronic Health Records (EHR). You understand hospital protocols, documentation standards, and best practices for medical charting. Your job is to produce EHR entries that are:
-
-Clear, concise, and medically accurate
-
-Structured and formatted according to hospital documentation protocol
-
-Easy to read, organized, and track across multiple visits or encounters
-
-Focused on patient care details such as symptoms, vitals, medications, treatments, assessments, and plans.
-
-Always write as if the notes will be used by other medical professionals for continuity of care.
-
-You are going to receive a conversation between a nurse and a patient following Quest SCHOLAR MAC. You just need to generate the EHR based on the conversation. Do not add any other information.
-"""
-    system_instruction = role_instruction
-    max_new_tokens = 1500
-
-    messages = [
-    {
-        "role": "system",
-        "content": [{"type": "text", "text": system_instruction}]
-    },
-    {
-        "role": "user",
-        "content": [
-            {"type": "text", "text": prompt}
-            #{type": "image", "image": image} if there is function to upload by image
-        ]
-    }
-]
-    output = pipe(text=messages, max_new_tokens=max_new_tokens)
-    response = output[0]["generated_text"][-1]["content"]
-    print("✅ EHR generated successfully!" + f'n\n{response}')
-
-    return {"status": "ok", "EHR": response}
-
-@app.post("/confirm-EHR")
-async def confirm_EHR(EHR: str = Form(...)):
-    os.makedirs("EHR_history", exist_ok=True)
-    filename = f"EHR_history/EHR_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    
-    # Save EHR to local for displaying purpose
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(EHR)
-    
-    # Add EHR to vectorstore for future retrieval
-    metadata = {"source": filename, "type": "ehr"}
-    add_text_to_vectorstore(EHR, metadata)
-    print("📝 EHR confirmed and saved successfully!")
-
-    return {"status": "saved", "filename": filename}
+@cl.on_message
+async def main(message: cl.Message):
+    result = await app.ainvoke({"messages": [message.content]})
+    ai_reply = result["messages"][-1]
+    await cl.Message(content=ai_reply).send()
