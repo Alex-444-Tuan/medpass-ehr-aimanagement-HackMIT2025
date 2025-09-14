@@ -8,6 +8,7 @@ import torch
 import os
 import whisper
 from dotenv import load_dotenv
+from RAGPipeline import add_text_to_vectorstore
 
 load_dotenv()
 
@@ -107,6 +108,14 @@ You are going to receive a conversation between a nurse and a patient following 
 async def confirm_EHR(EHR: str = Form(...)):
     os.makedirs("EHR_history", exist_ok=True)
     filename = f"EHR_history/EHR_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    
+    # Save EHR to local for displaying purpose
     with open(filename, "w", encoding="utf-8") as f:
         f.write(EHR)
+    
+    # Add EHR to vectorstore for future retrieval
+    metadata = {"source": filename, "type": "ehr"}
+    add_text_to_vectorstore(EHR, metadata)
+    print("📝 EHR confirmed and saved successfully!")
+
     return {"status": "saved", "filename": filename}

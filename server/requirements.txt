@@ -29,5 +29,9 @@ dotenv
 fastapi
 uvicorn
 
+#embeddings and vectorstore
+langchain-mistralai
+langchain-chroma
 
+#other dependencies
 python-multipart
