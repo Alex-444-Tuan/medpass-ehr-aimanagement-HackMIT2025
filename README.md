@@ -1,5 +1,7 @@
 # MedPass - AI-powered EHR Manager 🩺🖥️
 
+![MedPass_CoverArt](Cover_Art.png)
+
 ## Inspiration
 
 - **Fragmented Medical Records:** Patients’ data is scattered across hospitals, making it hard to get a full picture. MedPass provides a secure mobile EHR “passport.”
