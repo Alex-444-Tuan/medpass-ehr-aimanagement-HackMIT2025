@@ -121,11 +121,14 @@ npm run dev
 
 ```bash
 cd ../server
-npm install
-node index.js
+python -m venv venv
+source venv/bin/activate # On Mac
+venv\Scripts\activate  # On Window
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-- Backend runs at `http://localhost:4000`
+- Backend runs at `http://0.0.0.0:8000`
 
 ### 4. AI Doctor (Chainlit) Setup
 
